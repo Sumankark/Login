@@ -1,0 +1,199 @@
+import { secretKey } from "../../config.js";
+import bcrypt from "bcryptjs";
+import { User } from "../schema/model.js";
+import axios from "axios";
+import jwt from "jsonwebtoken";
+import { sendEmail } from "../utils/sendEmail.js";
+
+export const createUser = async (req, res) => {
+  const { userName, email, password, recaptchaToken } = req.body;
+
+  // Validation errors accumulator
+  const errors = [];
+
+  if (!userName || !email || !password || !recaptchaToken) {
+    errors.push("All fields are required.");
+  }
+
+  if (userName && userName.length < 3) {
+    errors.push("UserName must be at least 3 characters long.");
+  }
+
+  const emailDomain = email.split("@")[1];
+  if (emailDomain !== "gmail.com") {
+    errors.push("Only Gmail addresses are allowed.");
+  }
+
+  // Password Regex Validation
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Password must be at least 8 characters long, with one uppercase letter, one lowercase letter, one digit, and one special character.",
+    });
+  }
+
+  // Return if any validation errors exist
+  if (errors.length > 0) {
+    return res.status(400).json({ success: false, errors });
+  }
+
+  try {
+    // Check if username or email already exists
+    const [existingUserName, existingEmail] = await Promise.all([
+      User.findOne({ userName }),
+      User.findOne({ email }),
+    ]);
+
+    if (existingUserName) {
+      return res.status(400).json({
+        success: false,
+        message: "UserName already exists.",
+      });
+    }
+
+    if (existingEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already exists.",
+      });
+    }
+
+    // Verify reCAPTCHA token
+    const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
+    const captchaResponse = await axios.post(verificationUrl);
+
+    if (!captchaResponse.data.success) {
+      return res
+        .status(400)
+        .json({ success: false, message: "reCAPTCHA validation failed" });
+    }
+
+    // Hash the password
+    const hashPassword = await bcrypt.hash(password, 10);
+
+    // Create a new user in the database
+    const newUser = new User({
+      userName,
+      email,
+      password: hashPassword,
+      isVerifiedEmail: false,
+    });
+
+    const result = await User.create(newUser);
+
+    // Create JWT token
+    const token = jwt.sign({ id: result._id }, secretKey, { expiresIn: "3d" });
+
+    // Send verification email
+    await sendEmail({
+      from: "'Houseobj' <karkisuman0627@gmail.com>",
+      to: email,
+      subject: "Account Creation",
+      html: `
+              <h1> Your account  has been created successfully </h1>
+  
+              <a href="http://localhost:3000/verify-email?token=${token}">http://localhost:3000/verify-email?token=${token}</a>
+              `,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message:
+        "Sign Up Successfully. Please check your email and verify your account.",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const verifyUser = async (req, res) => {
+  try {
+    const tokenString = req.headers.authorization;
+    if (!tokenString) {
+      return res.status(400).json({
+        success: false,
+        message: "Authorization token is required.",
+      });
+    }
+
+    const token = tokenString.split(" ")[1];
+    const infoObj = jwt.verify(token, secretKey);
+    const userId = infoObj.id;
+
+    const result = await User.findByIdAndUpdate(
+      userId,
+      { isVerifiedEmail: true },
+      { new: true }
+    );
+
+    if (!result) {
+      res.status(404).json({
+        success: false,
+        message: "User does found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User Verified Successfully.",
+      result,
+    });
+  } catch (error) {
+    console.error("Verification failed: ", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const Signin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials.",
+      });
+    }
+
+    if (!user.isVerifiedEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Please verify your email first.",
+      });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials.",
+      });
+    }
+
+    const infoObj = { _id: user._id };
+    const expireInfo = { expiresIn: "365d" };
+    const token = jwt.sign(infoObj, secretKey, expireInfo);
+
+    res.status(200).json({
+      success: true,
+      message: "User signed in successfully.",
+      result: user,
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server error" });
+  }
+};
