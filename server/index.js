@@ -9,8 +9,10 @@ const expressApp = express();
 expressApp.listen(port, () => {
   console.log(`Express app is listen at port ${port}`);
 });
+
 expressApp.use(cors());
 expressApp.use(json());
+
 connectToDB();
 
 expressApp.use("/users", userRouter);

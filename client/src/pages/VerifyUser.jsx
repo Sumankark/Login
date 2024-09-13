@@ -8,30 +8,29 @@ const VerifyUser = () => {
   const token = query.get("token");
   const [loading, setLoading] = useState(true);
 
-  const userVerify = async () => {
-    try {
-      let result = await axios.patch(
-        "http://localhost:8080/users/verify-user",
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      console.log(result);
-      navigate("/login");
-    } catch (error) {
-      console.error("Verification failed: ", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const userVerify = async () => {
+      try {
+        let result = await axios.patch(
+          "http://localhost:8080/users/verify-user",
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log(result);
+        navigate("/login");
+      } catch (error) {
+        console.error("Verification failed: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     if (token) {
       userVerify();
     } else {
       console.error("No token found in URL.");
       setLoading(false);
     }
-  }, [token]);
+  }, [token, navigate]);
 
   return (
     <div>

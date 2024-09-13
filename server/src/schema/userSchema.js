@@ -1,5 +1,6 @@
 import { Schema } from "mongoose";
 
+// Define the schema for the user collection
 const userSchema = Schema(
   {
     userName: {
@@ -22,6 +23,7 @@ const userSchema = Schema(
     },
   },
   {
+    // Automatically adds createdAt and updatedAt fields to the schema
     timestamps: true,
   }
 );

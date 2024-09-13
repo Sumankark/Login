@@ -1,16 +1,17 @@
-import React, { useContext } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import React from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import VerifyUser from "../pages/VerifyUser";
 import Home from "../components/Home/Home";
-import { GlobalVariableContext } from "../App";
+
 const Routing = () => {
-  const { token } = useContext(GlobalVariableContext);
+  const token = localStorage.getItem("token");
+
   return (
     <div>
       <Routes>
-        <Route path="/" element={token ? <Home /> : <Navigate to="/login" />} />
+        <Route path="/" element={token ? <Home /> : <Navigate to={"/"} />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyUser />} />

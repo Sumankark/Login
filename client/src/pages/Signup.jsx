@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 import ReCAPTCHA from "react-google-recaptcha";
 import { Link } from "react-router-dom";
+import { toast, ToastContainer, Zoom } from "react-toastify";
 import axios from "axios";
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState("");
-  const [error, setError] = useState(null);
   const [data, setData] = useState({
     userName: "",
     email: "",
@@ -27,27 +27,44 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
 
-    // Validation for required fields
     if (!data.userName || !data.email || !data.password || !recaptchaToken) {
-      setError("All fields are required.");
+      toast.error("All fields are required.", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Zoom,
+      });
       return;
     }
 
     // Validation for Gmail addresses only
     const emailDomain = data.email.split("@")[1];
     if (emailDomain !== "gmail.com") {
-      setError("Only Gmail addresses are allowed.");
+      toast.error("Only Gmail addresses are allowed.", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Zoom,
+      });
       return;
     }
 
     try {
-      const response = await axios.post("http://localhost:8080/users", {
+      await axios.post("http://localhost:8080/users", {
         ...data,
         recaptchaToken,
       });
-      console.log(response.data);
 
       setData({
         userName: "",
@@ -55,15 +72,46 @@ const Signup = () => {
         password: "",
       });
       setRecaptchaToken("");
+      toast.success("Signup successful!", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Zoom,
+      });
     } catch (error) {
       if (
         error.response &&
         error.response.data &&
         error.response.data.message
       ) {
-        setError(error.response.data.message);
+        toast.error(error.response.data.message, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored",
+          transition: Zoom,
+        });
       } else {
-        setError(error.message);
+        toast.error(error.message, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored",
+          transition: Zoom,
+        });
       }
     }
   };
@@ -74,14 +122,15 @@ const Signup = () => {
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100">
+      <ToastContainer />
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold text-center text-gray-800">
           Sign Up
         </h2>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="mb-4">
-            <label htmlFor="userName" className="block text-gray-700">
+            <label htmlFor="userName" className="block text-left text-gray-700">
               Username
             </label>
             <input
@@ -95,7 +144,7 @@ const Signup = () => {
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-700">
+            <label htmlFor="email" className="block text-left text-gray-700">
               Email
             </label>
             <input
@@ -109,7 +158,7 @@ const Signup = () => {
             />
           </div>
           <div className="mb-6">
-            <label htmlFor="password" className="block text-gray-700">
+            <label htmlFor="password" className="block text-left text-gray-700">
               Password
             </label>
             <div className="flex">

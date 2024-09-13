@@ -2,11 +2,12 @@ import React, { useState } from "react";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { toast, ToastContainer, Zoom } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-const Signup = () => {
+const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState(null);
   const [data, setData] = useState({
     email: "",
     password: "",
@@ -25,7 +26,6 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
 
     try {
       const response = await axios.post(
@@ -35,22 +35,44 @@ const Signup = () => {
       const token = response.data.token;
       localStorage.setItem("token", token);
 
+      toast.success("Login successful!", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Zoom,
+      });
+
       navigate("/");
     } catch (error) {
-      setError("Signup failed. Try again");
+      toast.error("Signup failed. Please try again.", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Zoom,
+      });
     }
   };
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100">
+      <ToastContainer />
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold text-center text-gray-800">
           Sign In
         </h2>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-700">
+            <label htmlFor="email" className="block text-left text-gray-700">
               Email
             </label>
             <input
@@ -64,7 +86,7 @@ const Signup = () => {
             />
           </div>
           <div className="mb-6">
-            <label htmlFor="password" className="block text-gray-700">
+            <label htmlFor="password" className="block text-left text-gray-700">
               Password
             </label>
             <div className="flex">
@@ -108,4 +130,4 @@ const Signup = () => {
   );
 };
 
-export default Signup;
+export default Login;
