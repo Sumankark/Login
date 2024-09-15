@@ -197,3 +197,154 @@ export const Signin = async (req, res) => {
     res.status(500).json({ message: "Internal Server error" });
   }
 };
+
+export const forgotPassword = async (req, res) => {
+  const { email, recaptchaToken } = req.body;
+
+  try {
+    const existingEmail = await User.findOne({ email });
+
+    if (existingEmail) {
+      const token = jwt.sign({ id: existingEmail._id }, secretKey, {
+        expiresIn: "3d",
+      });
+
+      // Verify reCAPTCHA token
+      const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
+      const captchaResponse = await axios.post(verificationUrl);
+
+      if (!captchaResponse.data.success) {
+        return res
+          .status(400)
+          .json({ success: false, message: "reCAPTCHA validation failed" });
+      }
+
+      await sendEmail({
+        from: "'Houseobj' <karkisuman0627@gmail.com>",
+        to: email,
+        subject: "Reset Password",
+        html: `
+                <h1> Click the link to reset password </h1>
+    
+                <a href="http://localhost:3000/reset-password?token=${token}">http://localhost:3000/reset-password?token=${token}</a>
+                `,
+      });
+      res.status(200).json({
+        success: true,
+        message: "To Reset Password link has been send to your email",
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: "Email does not exists.",
+      });
+    }
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const _id = req._id;
+    const { recaptchaToken, password } = req.body;
+
+    if (!password || !recaptchaToken) {
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields are required." });
+    }
+
+    const hashPassword = await bcrypt.hash(password, 10);
+
+    // Verify reCAPTCHA token
+    const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
+    const captchaResponse = await axios.post(verificationUrl);
+
+    if (!captchaResponse.data.success) {
+      return res
+        .status(400)
+        .json({ success: false, message: "reCAPTCHA validation failed" });
+    }
+
+    const user = await User.findById(_id);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    const result = await User.findByIdAndUpdate(
+      _id,
+      { password: hashPassword },
+      { new: true }
+    );
+    res.status(200).json({
+      success: true,
+      message: "password reset Successfully.",
+      result: result,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const updatePassword = async (req, res, next) => {
+  const _id = req._id;
+  const oldPassword = req.body.oldPassword;
+  const newPassword = req.body.newPassword;
+
+  try {
+    const data = await User.findById(_id);
+    const hashPassword = data.password;
+
+    const isValidPassword = await bcrypt.compare(oldPassword, hashPassword);
+
+    if (isValidPassword) {
+      const newHashPassword = await bcrypt.hash(newPassword, 10);
+
+      const result = await User.findByIdAndUpdate(
+        _id,
+        { password: newHashPassword },
+        { new: true }
+      );
+      res.status(201).json({
+        success: true,
+        message: "password update successfully.",
+      });
+    } else {
+      const error = new Error("Credential does not match");
+      throw error;
+    }
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const myProfile = async (req, res, next) => {
+  try {
+    const id = req._id;
+
+    const result = await User.findById(id);
+
+    res.status(200).json({
+      success: true,
+      message: "profile read Successfully",
+      result: result,
+    });
+  } catch (error) {
+    res.json(400).status({
+      success: false,
+      message: error.message,
+    });
+  }
+};
