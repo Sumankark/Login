@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
+import { toast, ToastContainer, Zoom } from "react-toastify";
 
 const Profile = () => {
   const token = localStorage.getItem("token");
@@ -48,6 +49,17 @@ const Profile = () => {
       );
       setOldPassword("");
       setNewPassword("");
+      toast.success("Update Password successful!", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Zoom,
+      });
       setIsModalOpen(false);
     } catch (error) {
       setModalError("Failed to update password. Please try again.");
@@ -74,6 +86,8 @@ const Profile = () => {
   };
   return (
     <div className="p-6">
+      <ToastContainer />
+
       {error && (
         <div className="mb-4 p-4 bg-red-100 text-red-700 border border-red-300 rounded">
           {error}
