@@ -295,7 +295,7 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-export const updatePassword = async (req, res, next) => {
+export const updatePassword = async (req, res) => {
   const _id = req._id;
   const oldPassword = req.body.oldPassword;
   const newPassword = req.body.newPassword;
@@ -309,7 +309,7 @@ export const updatePassword = async (req, res, next) => {
     if (isValidPassword) {
       const newHashPassword = await bcrypt.hash(newPassword, 10);
 
-      const result = await User.findByIdAndUpdate(
+      await User.findByIdAndUpdate(
         _id,
         { password: newHashPassword },
         { new: true }
@@ -330,12 +330,10 @@ export const updatePassword = async (req, res, next) => {
   }
 };
 
-export const myProfile = async (req, res, next) => {
+export const myProfile = async (req, res) => {
   try {
-    const id = req._id;
-
-    const result = await User.findById(id);
-
+    const _id = req._id;
+    const result = await User.findById(_id);
     res.status(200).json({
       success: true,
       message: "profile read Successfully",

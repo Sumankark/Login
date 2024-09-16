@@ -6,6 +6,7 @@ import VerifyUser from "../pages/VerifyUser";
 import Home from "../components/Home/Home";
 import ForgotPassword from "../pages/ForgotPassword";
 import ResetPassword from "../pages/ResetPassword";
+import Profile from "../components/Profile/Profile";
 
 const Routing = () => {
   const token = localStorage.getItem("token");
@@ -22,6 +23,7 @@ const Routing = () => {
         <Route path="/verify-email" element={<VerifyUser />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </div>
   );
