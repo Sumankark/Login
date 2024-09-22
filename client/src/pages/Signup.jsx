@@ -4,10 +4,12 @@ import ReCAPTCHA from "react-google-recaptcha";
 import { Link } from "react-router-dom";
 import { toast, ToastContainer, Zoom } from "react-toastify";
 import axios from "axios";
+import { passwordStrength } from "../utility/passwordStrength"; // Ensure this function works as expected
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [psdStrength, setPsdStrength] = useState("");
   const [data, setData] = useState({
     userName: "",
     email: "",
@@ -15,14 +17,21 @@ const Signup = () => {
   });
 
   const handleChange = (e) => {
-    setData({
-      ...data,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+    setData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+
+    if (name === "password") {
+      const strength = passwordStrength(value);
+      setPsdStrength(strength);
+    }
   };
 
   const handleTogglePassword = () => {
-    setShowPassword(!showPassword);
+    setShowPassword((prev) => !prev);
   };
 
   const handleSubmit = async (e) => {
@@ -32,28 +41,27 @@ const Signup = () => {
       toast.error("All fields are required.", {
         position: "top-right",
         autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
         theme: "colored",
         transition: Zoom,
       });
       return;
     }
 
-    // Validation for Gmail addresses only
+    if (psdStrength === "weak") {
+      toast.error("Password is too weak. Please choose a stronger password.", {
+        position: "top-right",
+        autoClose: 5000,
+        theme: "colored",
+        transition: Zoom,
+      });
+      return;
+    }
+
     const emailDomain = data.email.split("@")[1];
     if (emailDomain !== "gmail.com") {
       toast.error("Only Gmail addresses are allowed.", {
         position: "top-right",
         autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
         theme: "colored",
         transition: Zoom,
       });
@@ -66,53 +74,21 @@ const Signup = () => {
         recaptchaToken,
       });
 
-      setData({
-        userName: "",
-        email: "",
-        password: "",
-      });
+      setData({ userName: "", email: "", password: "" });
       setRecaptchaToken("");
       toast.success("Signup successful!", {
         position: "top-right",
         autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
         theme: "colored",
         transition: Zoom,
       });
     } catch (error) {
-      if (
-        error.response &&
-        error.response.data &&
-        error.response.data.message
-      ) {
-        toast.error(error.response.data.message, {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-          transition: Zoom,
-        });
-      } else {
-        toast.error(error.message, {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-          transition: Zoom,
-        });
-      }
+      toast.error(error.response?.data?.message || error.message, {
+        position: "top-right",
+        autoClose: 5000,
+        theme: "colored",
+        transition: Zoom,
+      });
     }
   };
 
@@ -179,6 +155,20 @@ const Signup = () => {
                 {showPassword ? <IoMdEyeOff /> : <IoMdEye />}
               </button>
             </div>
+            {/* Password Strength Indicator */}
+            {data.password && (
+              <p
+                className={`mt-2 ${
+                  psdStrength === "weak"
+                    ? "text-red-500"
+                    : psdStrength === "moderate"
+                    ? "text-yellow-500"
+                    : "text-green-500"
+                } text-left ml-2`}
+              >
+                {psdStrength.charAt(0).toUpperCase() + psdStrength.slice(1)}
+              </p>
+            )}
           </div>
           <div className="mb-6">
             <ReCAPTCHA
@@ -188,7 +178,7 @@ const Signup = () => {
           </div>
           <button
             type="submit"
-            className="w-full bg-indigo-500 text-white py-2 rounded hover:bg-indigo-600 transition duration-200"
+            className={`w-full bg-indigo-500 text-white py-2 rounded hover:bg-indigo-600 transition duration-200 `}
           >
             Sign Up
           </button>

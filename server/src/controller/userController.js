@@ -11,28 +11,20 @@ export const createUser = async (req, res) => {
   // Validation errors accumulator
   const errors = [];
 
+  // Check if required fields are provided
   if (!userName || !email || !password || !recaptchaToken) {
     errors.push("All fields are required.");
   }
 
+  // Validate username
   if (userName && userName.length < 3) {
     errors.push("UserName must be at least 3 characters long.");
   }
 
+  // Validate email domain (only Gmail allowed)
   const emailDomain = email.split("@")[1];
   if (emailDomain !== "gmail.com") {
     errors.push("Only Gmail addresses are allowed.");
-  }
-
-  // Password Regex Validation
-  const passwordRegex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  if (!passwordRegex.test(password)) {
-    return res.status(400).json({
-      success: false,
-      message:
-        "Password must be at least 8 characters long, with one uppercase letter, one lowercase letter, one digit, and one special character.",
-    });
   }
 
   // Return if any validation errors exist
@@ -41,7 +33,7 @@ export const createUser = async (req, res) => {
   }
 
   try {
-    // Check if username or email already exists
+    // Check if username or email already exists in the database
     const [existingUserName, existingEmail] = await Promise.all([
       User.findOne({ userName }),
       User.findOne({ email }),
@@ -61,8 +53,8 @@ export const createUser = async (req, res) => {
       });
     }
 
-    // Verify reCAPTCHA token
-    const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
+    // Verify reCAPTCHA token using Google's API
+    const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecretKey}&response=${recaptchaToken}`;
     const captchaResponse = await axios.post(verificationUrl);
 
     if (!captchaResponse.data.success) {
@@ -71,10 +63,10 @@ export const createUser = async (req, res) => {
         .json({ success: false, message: "reCAPTCHA validation failed" });
     }
 
-    // Hash the password
+    // Hash the password using bcrypt
     const hashPassword = await bcrypt.hash(password, 10);
 
-    // Create a new user in the database
+    // Create a new user object for the database
     const newUser = new User({
       userName,
       email,
@@ -82,23 +74,27 @@ export const createUser = async (req, res) => {
       isVerifiedEmail: false,
     });
 
+    // Save the new user to the database
     const result = await User.create(newUser);
 
-    // Create JWT token
+    // Create a JWT token for email verification
     const token = jwt.sign({ id: result._id }, secretKey, { expiresIn: "3d" });
 
-    // Send verification email
+    // Send verification email to the user
     await sendEmail({
       from: "'Houseobj' <karkisuman0627@gmail.com>",
       to: email,
       subject: "Account Creation",
       html: `
-              <h1> Your account  has been created successfully </h1>
-  
-              <a href="http://localhost:3000/verify-email?token=${token}">http://localhost:3000/verify-email?token=${token}</a>
-              `,
+        <h1>Your account has been created successfully</h1>
+        <p>Click the link below to verify your email:</p>
+        <a href="http://localhost:3000/verify-email?token=${token}">
+          Verify your email
+        </a>
+      `,
     });
 
+    // Send a success response
     return res.status(201).json({
       success: true,
       message:
